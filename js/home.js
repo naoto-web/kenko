@@ -28,7 +28,11 @@ var Home = (function () {
     if (UI.has(g.lean)) {
       lean = '<div class="kv"><span>除脂肪（守る対象）</span><span><b>' + UI.num(g.lean, 1) + 'kg</b>　起点' + UI.num(g.baseLean, 1) + 'kgから ' + UI.signed(g.leanDiff, 2) + '</span></div>';
     }
-    var judge = g.judgeCount ? '<div class="kv"><span>判定（朝3回の平均）</span><span><b>' + UI.num(g.judgeAvg, 2) + 'kg</b>　' + g.judgeCount + '／3回</span></div>' : '';
+    if (UI.has(g.fat) && UI.has(g.targetFat)) {
+      lean += '<div class="kv"><span>体脂肪率</span><span><b>' + UI.num(g.fat, 1) + '%</b>　目安 ' + UI.num(g.targetFat, 1) + '%</span></div>' +
+        '<p class="note">目安＝除脂肪を守ったまま' + UI.num(g.target, 1) + 'kgになったときの体脂肪率</p>';
+    }
+    var judge =g.judgeCount ? '<div class="kv"><span>判定（朝3回の平均）</span><span><b>' + UI.num(g.judgeAvg, 2) + 'kg</b>　' + g.judgeCount + '／3回</span></div>' : '';
     return '<div class="box goal">' +
       '<h2>🎯 ' + UI.md(g.deadline) + 'までに ' + UI.num(g.target, 1) + 'kg以下</h2>' +
       '<div class="hero"><span class="big">あと ' + UI.num(Math.max(g.remain, 0), 1) + '<small>kg</small></span><span class="sub">残り' + g.daysLeft + '日</span></div>' +
