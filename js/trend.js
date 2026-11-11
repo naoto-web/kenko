@@ -29,14 +29,19 @@ var Trend = (function () {
     document.getElementById('trendBody').innerHTML =
       '<div class="seg"><button data-range="30"' + (range === 30 ? ' class="on"' : '') + '>30日</button><button data-range="90"' + (range === 90 ? ' class="on"' : '') + '>90日</button></div>' +
       card('chWeight', '体重（kg）', LG_DOT + '<span><i class="lg late"></i>12時以降の測定</span>' + LG_MA + '<span><i class="lg path"></i>必要ペース</span>') +
+      card('chFat', '体脂肪率（%）', LG_DOT + LG_MA + '<span><i class="lg path"></i>目安への道のり</span>') +
       card('chLean', '除脂肪（kg）＝守る対象', LG_DOT + LG_MA) +
-      card('chFat', '体脂肪率（%）', LG_DOT + LG_MA) +
       card('chSteps', '歩数', '') +
       card('chSleep', '睡眠（時間）', '') +
       '<p class="note foot">グラフを指でなぞると、その日の数字が出ます</p>';
 
-    // 体重だけ横軸を期限（12/23）まで伸ばして、目標までの道のりを見せる
-    var wDates = dates.slice();
+    // 体のグラフは、測りはじめる前の空白を出さない＝期間内の最初の測定日から描く
+    var first = 0;
+    for (var i = 0; i < days.length; i++) { if (UI.has(days[i].weight)) { first = i; break; } }
+    var bDates = dates.slice(first);
+
+    // 体重と体脂肪率は横軸を期限（12/23）まで伸ばして、目標までの道のりを見せる
+    var wDates = bDates.slice();
     for (var d = UI.addDays(today, 1); d <= g.deadline; d = UI.addDays(d, 1)) wDates.push(d);
     Chart.line(document.getElementById('chWeight'), {
       dates: wDates, v: pick(days, 'weight'), ma: pick(days, 'weightMa'), late: late, unit: 'kg', digits: 1, height: 220,
@@ -44,10 +49,14 @@ var Trend = (function () {
       path: { from: { date: g.startDate, y: g.startWeight }, to: { date: g.deadline, y: g.target } }
     });
     Chart.line(document.getElementById('chLean'), {
-      dates: dates, v: pick(days, 'lean'), ma: pick(days, 'leanMa'), unit: 'kg', digits: 1,
-      refs: [{ y: g.baseLean, label: '起点 ' + g.baseLean.toFixed(1) }]
+      dates: bDates, v: pick(days, 'lean'), ma: pick(days, 'leanMa'), unit: 'kg', digits: 1,
+      refs: [{ y: g.baseLean, label: '起点 ' + g.baseLean.toFixed(1) + '（ここより下がらなければOK）' }]
     });
-    Chart.line(document.getElementById('chFat'), { dates: dates, v: pick(days, 'fat'), ma: pick(days, 'fatMa'), unit: '%', digits: 1 });
+    Chart.line(document.getElementById('chFat'), {
+      dates: wDates, v: pick(days, 'fat'), ma: pick(days, 'fatMa'), unit: '%', digits: 1, height: 220,
+      refs: [{ y: g.targetFat, label: '目安 ' + g.targetFat.toFixed(1) }],
+      path: { from: { date: g.startDate, y: g.startFat }, to: { date: g.deadline, y: g.targetFat } }
+    });
     Chart.bars(document.getElementById('chSteps'), {
       dates: dates, v: pick(days, 'steps'), height: 160,
       fmtAxis: function (v) { return v >= 1000 ? (v / 1000) + '千' : String(v); },
