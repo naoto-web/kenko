@@ -78,9 +78,11 @@ var Home = (function () {
     var stepVal = UI.has(y.steps) ? '<span class="val mid">' + UI.comma(y.steps) + '<small>歩</small></span>' : WAIT;
     var todaySteps = UI.has(t.steps) ? '今日ここまで ' + UI.comma(t.steps) + '歩' : '今日の分はまだ届いていません';
     var stepSub = !UI.has(y.steps) && L.steps ? '最新＝' + UI.md(L.steps.date) + 'の分' : todaySteps;
-    var latestLine = '届いている最新：体重 ' + (L.weight ? UI.md(L.weight.date) + ' ' + e(L.weight.time) : '—') +
-      '／睡眠 ' + (L.sleep ? night(L.sleep.date) : '—') +
-      '／歩数 ' + (L.steps ? UI.md(L.steps.date) + (L.steps.date === r.today ? '（途中）' : '') : '—');
+    // 11/12 一行だと見づらい（Naoto）→ 体重・睡眠・歩数で改行
+    var latestLine = '届いている最新' +
+      '<br>　体重：' + (L.weight ? UI.md(L.weight.date) + ' ' + e(L.weight.time) : '—') +
+      '<br>　睡眠：' + (L.sleep ? night(L.sleep.date) : '—') +
+      '<br>　歩数：' + (L.steps ? UI.md(L.steps.date) + (L.steps.date === r.today ? '（途中）' : '') : '—');
     return '<div class="box"><h2>🌙 昨夜と昨日</h2><div class="tiles two">' +
       '<div class="tile"><span class="label">昨夜の睡眠 ' + night(r.today) + '</span>' + sleepVal + '<span class="sub">' + sleepSub + '</span></div>' +
       '<div class="tile"><span class="label">昨日の歩数 ' + UI.md(y.date) + '</span>' + stepVal + '<span class="sub">' + stepSub + '</span></div>' +
