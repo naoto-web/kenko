@@ -43,26 +43,49 @@ var Home = (function () {
       proj + lean + judge + '</div>';
   }
 
-  function bodyCard(b) {
+  // 届いていないときの書き方（11/12）＝「—」ではなく、その場に「まだ届いていません」
+  var WAIT = '<span class="val wait">まだ届いていません</span>';
+
+  function bodyCard(b, r) {
+    var lw = (r.latest || {}).weight;
     function tile(label, ma, today, unit, k) {
       return '<div class="tile"><span class="label">' + label + '</span>' +
         '<span class="val">' + UI.num(ma, k) + '<small>' + unit + '</small></span>' +
-        '<span class="sub">今朝 ' + (UI.has(today) ? UI.num(today, k) : '—') + '</span></div>';
+        '<span class="sub">今朝 ' + (UI.has(today) ? UI.num(today, k) : '未着') + '</span></div>';
     }
-    var when = UI.has(b.weight) ? '今朝の測定 ' + e(b.time) + (b.late ? '（12時以降＝朝の値ではない）' : '') : '今朝はまだ測っていません';
+    var when;
+    if (UI.has(b.weight)) {
+      when = '今朝（' + UI.md(r.today) + ' ' + e(b.time) + '）の測定まで反映' + (b.late ? '（12時以降＝朝の値ではない）' : '');
+    } else {
+      when = '今朝（' + UI.md(r.today) + '）の体重はまだ届いていません' +
+        (lw ? '。7日平均は ' + UI.md(lw.date) + ' ' + e(lw.time) + ' の測定まで' : '');
+    }
     return '<div class="box"><h2>⚖️ 体（7日平均）</h2><div class="tiles three">' +
       tile('体重', b.weightMa, b.weight, 'kg', 1) + tile('体脂肪率', b.fatMa, b.fat, '%', 1) + tile('除脂肪', b.leanMa, b.lean, 'kg', 1) +
       '</div><p class="note">' + when + '</p></div>';
   }
 
+  // 「11/11→12」（昨夜＝前日の夜から今朝まで）
+  function night(ymd) {
+    return UI.md(UI.addDays(ymd, -1)) + '→' + UI.parse(ymd).getDate();
+  }
+
   function dayCard(r) {
-    var s = r.sleep, y = r.yesterday, t = r.todayMove;
-    var sleep = UI.has(s.minutes) && s.minutes > 0 ? UI.hm(s.minutes) : '—';
-    var sleepSub = s.start ? e(s.start) + '〜' + e(s.end) : '';
+    var s = r.sleep, y = r.yesterday, t = r.todayMove, L = r.latest || {};
+    var hasSleep = UI.has(s.minutes) && s.minutes > 0;
+    var sleepVal = hasSleep ? '<span class="val mid">' + UI.hm(s.minutes) + '</span>' : WAIT;
+    var sleepSub = hasSleep && s.start ? e(s.start) + '〜' + e(s.end) : (L.sleep ? '最新＝' + night(L.sleep.date) + 'の分' : '');
+    var stepVal = UI.has(y.steps) ? '<span class="val mid">' + UI.comma(y.steps) + '<small>歩</small></span>' : WAIT;
+    var todaySteps = UI.has(t.steps) ? '今日ここまで ' + UI.comma(t.steps) + '歩' : '今日の分はまだ届いていません';
+    var stepSub = !UI.has(y.steps) && L.steps ? '最新＝' + UI.md(L.steps.date) + 'の分' : todaySteps;
+    var latestLine = '届いている最新：体重 ' + (L.weight ? UI.md(L.weight.date) + ' ' + e(L.weight.time) : '—') +
+      '／睡眠 ' + (L.sleep ? night(L.sleep.date) : '—') +
+      '／歩数 ' + (L.steps ? UI.md(L.steps.date) + (L.steps.date === r.today ? '（途中）' : '') : '—');
     return '<div class="box"><h2>🌙 昨夜と昨日</h2><div class="tiles two">' +
-      '<div class="tile"><span class="label">昨夜の睡眠</span><span class="val mid">' + sleep + '</span><span class="sub">' + sleepSub + '</span></div>' +
-      '<div class="tile"><span class="label">昨日の歩数</span><span class="val mid">' + UI.comma(y.steps) + '<small>歩</small></span><span class="sub">今日ここまで ' + UI.comma(t.steps) + '歩</span></div>' +
+      '<div class="tile"><span class="label">昨夜の睡眠 ' + night(r.today) + '</span>' + sleepVal + '<span class="sub">' + sleepSub + '</span></div>' +
+      '<div class="tile"><span class="label">昨日の歩数 ' + UI.md(y.date) + '</span>' + stepVal + '<span class="sub">' + stepSub + '</span></div>' +
       '</div>' +
+      '<p class="note">' + latestLine + '</p>' +
       '<div class="kv"><span>昨日の運動</span><span>筋トレ ' + mark(!!y.kintore) + (y.kintore ? '（' + e(y.kintore) + '）' : '') + '　歩く ' + mark(y.walk) + (y.walk ? '（' + y.walkMin + '分）' : '') + '</span></div>' +
       '<div class="kv"><span>今日の運動</span><span>筋トレ ' + mark(!!t.kintore) + (t.kintore ? '（' + e(t.kintore) + '）' : '') + '　歩く ' + mark(t.walk) + (t.walk ? '（' + t.walkMin + '分）' : '') + '</span></div>' +
       '</div>';
@@ -92,7 +115,7 @@ var Home = (function () {
   function render(r) {
     document.getElementById('homeBody').innerHTML =
       '<p class="datehead">' + UI.mdw(r.today) + '</p>' +
-      missing(r.missing) + goalCard(r.goal) + bodyCard(r.body) + dayCard(r) + weekCard(r.week, r.today) + foodCard(r.food) +
+      missing(r.missing) + goalCard(r.goal) + bodyCard(r.body, r) + dayCard(r) + weekCard(r.week, r.today) + foodCard(r.food) +
       '<p class="note foot">更新 ' + e(String(r.now).substring(5, 16).replace('-', '/')) + (r.jobLast ? '　分析役が最後に動いた時刻 ' + e(r.jobLast) : '') + '</p>';
   }
 
