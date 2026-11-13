@@ -78,16 +78,11 @@ var Home = (function () {
     var stepVal = UI.has(y.steps) ? '<span class="val mid">' + UI.comma(y.steps) + '<small>歩</small></span>' : WAIT;
     var todaySteps = UI.has(t.steps) ? '今日ここまで ' + UI.comma(t.steps) + '歩' : '今日の分はまだ届いていません';
     var stepSub = !UI.has(y.steps) && L.steps ? '最新＝' + UI.md(L.steps.date) + 'の分' : todaySteps;
-    // 11/12 一行だと見づらい（Naoto）→ 体重・睡眠・歩数で改行
-    var latestLine = '届いている最新' +
-      '<br>　体重：' + (L.weight ? UI.md(L.weight.date) + ' ' + e(L.weight.time) : '—') +
-      '<br>　睡眠：' + (L.sleep ? night(L.sleep.date) : '—') +
-      '<br>　歩数：' + (L.steps ? UI.md(L.steps.date) + (L.steps.date === r.today ? '（途中）' : '') : '—');
+    // 11/13 「届いている最新」の行はやめた（Naoto＝タイルの日付と情報が被る）。未着のときだけタイル内に「最新＝◯◯の分」を出す
     return '<div class="box"><h2>🌙 昨夜と昨日</h2><div class="tiles two">' +
       '<div class="tile"><span class="label">昨夜の睡眠 ' + night(r.today) + '</span>' + sleepVal + '<span class="sub">' + sleepSub + '</span></div>' +
       '<div class="tile"><span class="label">昨日の歩数 ' + UI.md(y.date) + '</span>' + stepVal + '<span class="sub">' + stepSub + '</span></div>' +
       '</div>' +
-      '<p class="note">' + latestLine + '</p>' +
       '<div class="kv"><span>昨日の運動</span><span>筋トレ ' + mark(!!y.kintore) + (y.kintore ? '（' + e(y.kintore) + '）' : '') + '　歩く ' + mark(y.walk) + (y.walk ? '（' + y.walkMin + '分）' : '') + '</span></div>' +
       '<div class="kv"><span>今日の運動</span><span>筋トレ ' + mark(!!t.kintore) + (t.kintore ? '（' + e(t.kintore) + '）' : '') + '　歩く ' + mark(t.walk) + (t.walk ? '（' + t.walkMin + '分）' : '') + '</span></div>' +
       '</div>';
