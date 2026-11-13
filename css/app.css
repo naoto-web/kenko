@@ -121,9 +121,13 @@ textarea { resize: vertical; }
 .ex-head b { font-size: 15.5px; }
 .ex-head .range { flex: none; font-size: 12px; color: var(--fg-dim); }
 .ex-note { font-size: 12px; color: var(--fg-dim); margin-bottom: 4px; }
-.set { display: grid; grid-template-columns: 62px 46px 1fr 46px 58px; gap: 6px; align-items: center; margin-top: 8px; }
-.set .no { font-size: 12px; color: var(--fg-dim); }
-.set .prev { font-size: 12px; color: var(--fg-dim); text-align: right; white-space: nowrap; }
+.set { display: grid; grid-template-columns: 54px 42px 1fr 42px 92px; gap: 5px; align-items: center; margin-top: 8px; }
+.set .no { font-size: 12px; color: var(--fg-dim); white-space: nowrap; }
+.set .no small { display: block; font-size: 11px; color: var(--fg-faint); }
+.set .stops { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.set .stops button { height: 46px; border: 1px solid var(--line); background: var(--sunk); border-radius: 9px; font-size: 12.5px; font-weight: 600; padding: 0; color: var(--fg-dim); }
+.set .stops button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.rec-line b small { font-size: 10.5px; font-weight: 500; color: var(--fg-dim); margin-left: 1px; }
 .set input { width: 100%; min-width: 0; height: 46px; text-align: center; font-size: 22px; font-weight: 700; border: 1px solid var(--line); background: var(--sunk); border-radius: 10px; padding: 0; -moz-appearance: textfield; font-variant-numeric: tabular-nums; }
 .set input::-webkit-outer-spin-button, .set input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .set input::placeholder { color: #c9c5bb; font-weight: 500; }
