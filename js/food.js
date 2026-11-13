@@ -33,8 +33,10 @@ var Food = (function () {
     if (shot) {
       return '<div class="box"><h2>この写真を送る</h2>' +
         '<img class="shot" src="data:image/jpeg;base64,' + shot.image + '" alt="">' +
-        '<div class="q">ひとこと（なくてもよい）</div>' +
-        '<input type="text" id="foodMemo" maxlength="100" placeholder="例：ごはん半分・2人で分けた" value="' + e(shot.memo) + '">' +
+        '<div class="q">料理名や量（書くと正確になる）</div>' +
+        '<input type="text" id="foodMemo" maxlength="100" placeholder="例：唐揚げ定食・ごはん半分・餃子6個" value="' + e(shot.memo) + '">' +
+        '<div class="q">食べた時刻</div>' +
+        '<input type="time" id="foodTime" value="' + e(shot.time) + '">' +
         '<div class="row2"><button class="btn sub" id="foodCancel"' + (sending ? ' disabled' : '') + '>やめる</button>' +
         '<button class="btn" id="foodSend"' + (sending ? ' disabled' : '') + '>' + (sending ? '送信中…' : '送る') + '</button></div></div>';
     }
@@ -49,7 +51,8 @@ var Food = (function () {
   }
 
   function itemHtml(m) {
-    var head = '<div class="rec-head"><b>' + e(m.name) + '</b><span class="time">' + e(m.time) + '</span></div>';
+    // 時刻はその場で直せる（食べた時刻）
+    var head = '<div class="rec-head"><b>' + e(m.name) + '</b><input type="time" class="rec-time" data-time="' + e(m.id) + '" value="' + e(m.time) + '" aria-label="食べた時刻"></div>';
     if (m.state === '未分析') {
       return '<div class="rec">' + head + '<div class="note">⏳ 分析待ち' + (m.memo ? '　📝 ' + e(m.memo) : '') + '</div>' +
         '<div class="rec-acts"><button class="link" data-del="' + e(m.id) + '">消す</button></div></div>';
@@ -65,7 +68,9 @@ var Food = (function () {
   }
 
   function listCard() {
-    var items = data.items.slice().sort(function (a, b) { return a.id < b.id ? 1 : -1; });
+    // 食べた時刻の新しい順（生活日は5時区切り＝0〜4時台は一日の最後）
+    function key(m) { return (m.time < '05:00' ? '1' : '0') + m.time + m.id; }
+    var items = data.items.slice().sort(function (a, b) { return key(a) < key(b) ? 1 : -1; });
     return '<div class="box"><h2>記録</h2>' +
       (items.length ? items.map(itemHtml).join('') : '<p class="note">まだありません</p>') + '</div>';
   }
@@ -124,7 +129,7 @@ var Food = (function () {
     if (!shot || sending) return;
     sending = true;
     render();
-    API.call('addMeal', { kind: 'photo', image: shot.image, memo: shot.memo, date: date })
+    API.call('addMeal', { kind: 'photo', image: shot.image, memo: shot.memo, time: shot.time, date: date })
       .then(function () {
         shot = null;
         sending = false;
@@ -179,11 +184,20 @@ var Food = (function () {
 
   body.addEventListener('change', function (ev) {
     var t = ev.target;
+    if (t.id === 'foodTime' && shot) { shot.time = t.value; return; }
+    if (t.dataset.time) {
+      if (!t.value) return;
+      API.call('editMeal', { id: t.dataset.time, time: t.value })
+        .then(function () { UI.toast('時刻を直しました'); return reloadQuiet(); })
+        .catch(function (err) { UI.toast('直せませんでした：' + err.message); });
+      return;
+    }
     if (t.type !== 'file' || !t.files || !t.files[0]) return;
     var file = t.files[0];
     t.value = '';
     shrink(file).then(function (b64) {
-      shot = { image: b64, memo: '' };
+      var now = new Date();
+      shot = { image: b64, memo: '', time: ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) };
       render();
       window.scrollTo(0, 0);
     }).catch(function (err) { UI.toast(err.message); });
