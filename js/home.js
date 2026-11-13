@@ -106,7 +106,7 @@ var Home = (function () {
     return '<div class="box"><h2>🍚 今日のたんぱく質　<small>' + Math.round(p) + 'g／' + target + 'g</small></h2>' +
       '<div class="meter"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
       (f.total.pending ? '<p class="note">⏳ 分析待ち ' + f.total.pending + '件</p>' : '') +
-      '<p class="note">食事の記録（写真・定番ボタン）は11/13に入ります</p></div>';
+      '<button class="btn wide" data-go="food" style="margin-top:10px">食事を記録する</button></div>';
   }
 
   function render(r) {
