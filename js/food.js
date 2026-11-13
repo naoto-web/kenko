@@ -17,20 +17,36 @@ var Food = (function () {
     return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
   }
 
+  // 1行＝いまの量／目安＋バー。min＝ここまでは摂りたい（以上）／max＝ここまでに収めたい（まで）
+  function nutRow(label, cur, target, unit, k, kind) {
+    cur = Number(cur) || 0;
+    var pct = Math.max(0, Math.min(1, cur / target)) * 100;
+    var diff = target - cur;
+    var fmt = function (v) { return k ? Number(v).toFixed(k) : UI.comma(v); };
+    var cls = '', st;
+    if (kind === 'min') {
+      if (diff <= 0) { cls = ' good'; st = '達成'; } else st = 'あと' + fmt(diff) + unit;
+    } else {
+      if (diff < 0) { cls = ' over'; st = fmt(-diff) + unit + ' 超え'; } else st = 'あと' + fmt(diff) + unit;
+    }
+    return '<div class="nrow' + cls + '"><div class="nrow-head"><span class="nl">' + label + '</span>' +
+      '<span class="nv"><b>' + fmt(cur) + '</b>／' + fmt(target) + unit + (kind === 'min' ? '以上' : 'まで') + '</span>' +
+      '<span class="ns">' + st + '</span></div>' +
+      '<div class="meter"><i style="width:' + pct.toFixed(1) + '%"></i></div></div>';
+  }
+
   function totalCard() {
-    var t = data.total, target = data.proteinTarget || 80;
-    var p = t.protein || 0;
-    var pct = Math.max(0, Math.min(1, p / target)) * 100;
-    var left = target - p;
-    return '<div class="box"><h2>たんぱく質　<small>' + (left > 0 ? 'あと' + Math.ceil(left) + 'g' : '達成') + '</small></h2>' +
-      '<div class="hero"><span class="big">' + Math.round(p) + '<small>g／' + target + 'g</small></span></div>' +
-      '<div class="meter"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
-      '<div class="tiles four">' +
-      '<div class="tile"><span class="label">kcal</span><span class="val small">' + UI.comma(t.kcal) + '</span></div>' +
-      '<div class="tile"><span class="label">脂質</span><span class="val small">' + g(t.fat, 0) + '<small>g</small></span></div>' +
-      '<div class="tile"><span class="label">食物繊維</span><span class="val small">' + g(t.fiber, 1) + '<small>g</small></span></div>' +
-      '<div class="tile"><span class="label">食塩</span><span class="val small">' + g(t.salt, 1) + '<small>g</small></span></div>' +
-      '</div>' +
+    var t = data.total;
+    var T = data.targets || { kcal: 1400, protein: 80, fat: 40, sugar: 180, fiber: 21, salt: 7.5 };
+    // 糖質＝炭水化物−食物繊維
+    var sugar = Math.max(0, (t.carb || 0) - (t.fiber || 0));
+    return '<div class="box"><h2>' + (date === UI.lifeDay() ? '今日' : UI.md(date)) + 'の合計と目安</h2>' +
+      nutRow('カロリー', t.kcal, T.kcal, 'kcal', 0, 'max') +
+      nutRow('たんぱく質', t.protein, T.protein, 'g', 0, 'min') +
+      nutRow('脂質', t.fat, T.fat, 'g', 0, 'max') +
+      nutRow('糖質', sugar, T.sugar, 'g', 0, 'max') +
+      nutRow('食物繊維', t.fiber, T.fiber, 'g', 1, 'min') +
+      nutRow('食塩', t.salt, T.salt, 'g', 1, 'max') +
       (t.pending ? '<p class="note">⏳ 分析待ち ' + t.pending + '件（合計にはまだ入っていません）</p>' : '') +
       '</div>';
   }
