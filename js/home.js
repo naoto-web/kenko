@@ -75,8 +75,8 @@ var Home = (function () {
     var hasSleep = UI.has(s.minutes) && s.minutes > 0;
     var sleepVal = hasSleep ? '<span class="val mid">' + UI.hm(s.minutes) + '</span>' : WAIT;
     var sleepSub = hasSleep && s.start ? e(s.start) + '〜' + e(s.end) : (L.sleep ? '最新＝' + night(L.sleep.date) + 'の分' : '');
-    var stepVal = UI.has(y.steps) ? '<span class="val mid">' + UI.comma(y.steps) + '<small>歩' + (UI.has(y.km) ? '　約' + UI.num(y.km, 1) + 'km' : '') + '</small></span>' : WAIT;
-    var todaySteps = UI.has(t.steps) ? '今日ここまで ' + UI.comma(t.steps) + '歩' + (UI.has(t.km) ? '（約' + UI.num(t.km, 1) + 'km）' : '') :'今日の分はまだ届いていません';
+    var stepVal = UI.has(y.steps) ? '<span class="val mid">' + UI.comma(y.steps) + '<small>歩' + (UI.has(y.km) ? '　' + UI.num(y.km, 1) + 'km' : '') + '</small></span>' : WAIT;
+    var todaySteps = UI.has(t.steps) ? '今日 ' + UI.comma(t.steps) + '歩' + (UI.has(t.km) ? '（' + UI.num(t.km, 1) + 'km）' : '') :'今日の分はまだ届いていません';
     var stepSub = !UI.has(y.steps) && L.steps ? '最新＝' + UI.md(L.steps.date) + 'の分' : todaySteps;
     // 11/13 「届いている最新」の行はやめた（Naoto＝タイルの日付と情報が被る）。未着のときだけタイル内に「最新＝◯◯の分」を出す
     return '<div class="box"><h2>🌙 昨夜と昨日</h2><div class="tiles two">' +
