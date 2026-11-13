@@ -1,15 +1,21 @@
-// food.js — 食事＝📷撮る／定番ボタン／その日の記録と合計
+// food.js — 食事＝📷撮る／文字で入れる／定番ボタン／その日の記録と合計
 // 写真は画面で縮めてから送る → GASがドライブに保存 → PCの分析役（1時間おき）が中身を埋める
+// どの入れ方も、登録の前に確認の画面（食べた時刻など）を1回はさむ
 var Food = (function () {
   var e = UI.esc;
   var MAX_SIDE = 1600;
   var date = '';
   var data = null;
-  // 送る前の写真（確認中）
-  var shot = null;
+  // 登録の前の確認中の1件 { kind:'photo'|'text'|'teiban', image, name, memo, time, share }
+  var entry = null;
   var sending = false;
 
   function g(v, k) { return UI.has(v) ? UI.num(v, k) : '—'; }
+
+  function nowHm() {
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
 
   function totalCard() {
     var t = data.total, target = data.proteinTarget || 80;
@@ -29,23 +35,36 @@ var Food = (function () {
       '</div>';
   }
 
-  function addCard() {
-    if (shot) {
-      return '<div class="box"><h2>この写真を送る</h2>' +
-        '<img class="shot" src="data:image/jpeg;base64,' + shot.image + '" alt="">' +
-        '<div class="q">料理名や量（書くと正確になる）</div>' +
-        '<input type="text" id="foodMemo" maxlength="100" placeholder="例：唐揚げ定食・ごはん半分・餃子6個" value="' + e(shot.memo) + '">' +
-        '<div class="q">食べた時刻</div>' +
-        '<input type="time" id="foodTime" value="' + e(shot.time) + '">' +
-        '<div class="row2"><button class="btn sub" id="foodCancel"' + (sending ? ' disabled' : '') + '>やめる</button>' +
-        '<button class="btn" id="foodSend"' + (sending ? ' disabled' : '') + '>' + (sending ? '送信中…' : '送る') + '</button></div></div>';
+  // 登録の前の確認（写真・文字・定番で共通）
+  function entryCard() {
+    var dis = sending ? ' disabled' : '';
+    var top, fields = '';
+    if (entry.kind === 'teiban') {
+      top = '<h2>' + e(entry.name) + '</h2>';
+    } else {
+      top = entry.kind === 'photo' ?
+        '<h2>この写真を送る</h2><img class="shot" src="data:image/jpeg;base64,' + entry.image + '" alt="">' :
+        '<h2>文字で入れる</h2>';
+      fields = '<div class="q">' + (entry.kind === 'photo' ? '料理名や量（書くと正確になる）' : '食べたもの（料理名と量）') + '</div>' +
+        '<textarea id="foodMemo" rows="2" maxlength="200" placeholder="' + (entry.kind === 'photo' ? '例：唐揚げ定食・ごはん半分・餃子6個' : '例：牛丼並盛と味噌汁／カレーライス1皿とサラダ') + '">' + e(entry.memo) + '</textarea>' +
+        '<label class="check"><input type="checkbox" id="foodShare"' + (entry.share ? ' checked' : '') + '> 2人で分ける<small>（' + (entry.kind === 'photo' ? '写真' : '書いた量') + 'は2人分）</small></label>';
     }
+    return '<div class="box">' + top + fields +
+      '<div class="q">食べた時刻</div>' +
+      '<input type="time" id="foodTime" value="' + e(entry.time) + '">' +
+      '<div class="row2"><button class="btn sub" id="foodCancel"' + dis + '>やめる</button>' +
+      '<button class="btn" id="foodSend"' + dis + '>' + (sending ? '送信中…' : entry.kind === 'teiban' ? '記録する' : '送る') + '</button></div></div>';
+  }
+
+  function addCard() {
+    if (entry) return entryCard();
     var teiban = (data.teiban || []).map(function (t) {
       return '<button class="btn sub teiban" data-teiban="' + e(t.name) + '">' + e(t.name) + '<small>たんぱく質 ' + g(t.protein, 0) + 'g</small></button>';
     }).join('');
     return '<div class="box"><h2>記録する</h2>' +
       '<div class="row2"><button class="btn big" id="foodCam">📷 撮る</button><button class="btn sub big" id="foodPick">🖼 写真を選ぶ</button></div>' +
-      '<p class="note">料理でも、パッケージ裏の栄養表示でも。分析はPCが動いているときに1時間おき。</p>' +
+      '<button class="btn sub wide" id="foodText" style="margin-top:8px">✏️ 文字で入れる（写真なし）</button>' +
+      '<p class="note">料理でも、パッケージの栄養表示でも。分析はPCが動いているときに1時間おき。</p>' +
       (teiban ? '<div class="q">定番</div><div class="teibans">' + teiban + '</div>' : '') +
       '</div>';
   }
@@ -126,14 +145,24 @@ var Food = (function () {
   }
 
   function send() {
-    if (!shot || sending) return;
+    if (!entry || sending) return;
+    var req = { kind: entry.kind, time: entry.time, date: date };
+    if (entry.kind === 'teiban') {
+      req.name = entry.name;
+    } else {
+      req.memo = entry.memo.trim();
+      req.share = entry.share;
+      if (entry.kind === 'photo') req.image = entry.image;
+      else if (!req.memo) { UI.toast('食べたものを書いてください'); return; }
+    }
     sending = true;
     render();
-    API.call('addMeal', { kind: 'photo', image: shot.image, memo: shot.memo, time: shot.time, date: date })
+    API.call('addMeal', req)
       .then(function () {
-        shot = null;
+        var teiban = entry.kind === 'teiban';
+        entry = null;
         sending = false;
-        UI.toast('送りました');
+        UI.toast(teiban ? '記録しました' : '送りました');
         return reloadQuiet();
       })
       .catch(function (err) {
@@ -152,17 +181,12 @@ var Food = (function () {
     if (!t) return;
     if (t.id === 'foodCam') { document.getElementById('foodFileCam').click(); return; }
     if (t.id === 'foodPick') { document.getElementById('foodFilePick').click(); return; }
-    if (t.id === 'foodCancel') { shot = null; render(); return; }
+    if (t.id === 'foodText') { entry = { kind: 'text', memo: '', time: nowHm(), share: false }; render(); return; }
+    if (t.id === 'foodCancel') { entry = null; render(); return; }
     if (t.id === 'foodSend') { send(); return; }
     if (t.id === 'foodPrev') { date = UI.addDays(date, -1); data = null; reloadQuiet(); return; }
     if (t.id === 'foodNext') { date = UI.addDays(date, 1); data = null; reloadQuiet(); return; }
-    if (t.dataset.teiban) {
-      t.disabled = true;
-      API.call('addMeal', { kind: 'teiban', name: t.dataset.teiban, date: date })
-        .then(function () { UI.toast('記録しました'); return reloadQuiet(); })
-        .catch(function (err) { t.disabled = false; UI.toast('記録できませんでした：' + err.message); });
-      return;
-    }
+    if (t.dataset.teiban) { entry = { kind: 'teiban', name: t.dataset.teiban, time: nowHm() }; render(); return; }
     if (t.dataset.half) {
       var m = find(t.dataset.half);
       if (!m || !confirm('「' + m.name + '」の量を半分にしますか？')) return;
@@ -174,7 +198,7 @@ var Food = (function () {
     }
     if (t.dataset.del) {
       var d = find(t.dataset.del);
-      if (!d || !confirm('「' + d.name + '」を消しますか？')) return;
+      if (!d || !confirm('「' + d.name + '」を本当に消しますか？（元に戻せません）')) return;
       t.disabled = true;
       API.call('editMeal', { id: d.id, remove: true })
         .then(reloadQuiet)
@@ -184,7 +208,8 @@ var Food = (function () {
 
   body.addEventListener('change', function (ev) {
     var t = ev.target;
-    if (t.id === 'foodTime' && shot) { shot.time = t.value; return; }
+    if (t.id === 'foodTime' && entry) { entry.time = t.value; return; }
+    if (t.id === 'foodShare' && entry) { entry.share = t.checked; return; }
     if (t.dataset.time) {
       if (!t.value) return;
       API.call('editMeal', { id: t.dataset.time, time: t.value })
@@ -196,19 +221,18 @@ var Food = (function () {
     var file = t.files[0];
     t.value = '';
     shrink(file).then(function (b64) {
-      var now = new Date();
-      shot = { image: b64, memo: '', time: ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) };
+      entry = { kind: 'photo', image: b64, memo: '', time: nowHm(), share: false };
       render();
       window.scrollTo(0, 0);
     }).catch(function (err) { UI.toast(err.message); });
   });
 
   body.addEventListener('input', function (ev) {
-    if (ev.target.id === 'foodMemo' && shot) shot.memo = ev.target.value;
+    if (ev.target.id === 'foodMemo' && entry) entry.memo = ev.target.value;
   });
 
-  // 写真を確認中・送信中は、勝手に読み直さない
-  function busy() { return !!shot || sending; }
+  // 確認中・送信中は、勝手に読み直さない
+  function busy() { return !!entry || sending; }
 
   return { load: load, busy: busy };
 })();
