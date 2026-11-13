@@ -11,7 +11,8 @@ var Kintore = (function () {
     var d = null;
     try { d = JSON.parse(API.store(DRAFT) || 'null'); } catch (err) { d = null; }
     // 日付が変わっていたら前の日の途中経過は捨てる
-    if (!d || d.day !== UI.lifeDay()) d = { day: UI.lifeDay(), menu: '', items: {}, tempo: '', stop: '', memo: '', date: '' };
+    if (!d || d.day !== UI.lifeDay()) d = { day: UI.lifeDay(), menu: '', items: {}, stops: {}, memo: '', date: '' };
+    if (!d.stops) d.stops = {};
     return d;
   }
   function saveDraft() { API.store(DRAFT, JSON.stringify(draft)); }
@@ -20,10 +21,14 @@ var Kintore = (function () {
     if (!Array.isArray(a)) return 0;
     return a.reduce(function (s, v) { return s + (UI.has(v) ? Number(v) : 0); }, 0);
   }
-  function reps(a) {
+  // 回数の並び。セットごとの止め方（11/13〜）があれば、回数の後ろに小さく「限」「目」
+  function reps(a, stops) {
     if (a === true) return '✔';
     if (!Array.isArray(a)) return '—';
-    return a.map(function (v) { return UI.has(v) ? v : '—'; }).join('・');
+    return a.map(function (v, i) {
+      var s = Array.isArray(stops) ? stops[i] : '';
+      return (UI.has(v) ? v : '—') + (s ? '<small>' + (s === '限界' ? '限' : '目') + '</small>' : '');
+    }).join('・');
   }
 
   // 合計の一言（前回との比較）
@@ -46,14 +51,20 @@ var Kintore = (function () {
         (it.prev === true ? '<small>（前回もやった）</small>' : '') + '</label></div>';
     }
     var cur = Array.isArray(draft.items[it.key]) ? draft.items[it.key] : [];
+    var st = Array.isArray(draft.stops[it.key]) ? draft.stops[it.key] : [];
     var rows = '';
     for (var i = 0; i < it.sets; i++) {
       var pv = Array.isArray(it.prev) && UI.has(it.prev[i]) ? it.prev[i] : '';
-      rows += '<div class="set"><span class="no">' + (i + 1) + 'セット目</span>' +
-        '<button class="step" data-key="' + e(it.key) + '" data-set="' + i + '" data-d="-1" aria-label="1回減らす">−</button>' +
-        '<input type="number" inputmode="numeric" min="0" max="999" data-key="' + e(it.key) + '" data-set="' + i + '" value="' + (UI.has(cur[i]) ? cur[i] : '') + '" placeholder="' + pv + '">' +
-        '<button class="step" data-key="' + e(it.key) + '" data-set="' + i + '" data-d="1" aria-label="1回増やす">＋</button>' +
-        '<span class="prev">' + (pv !== '' ? '前回 ' + pv : '') + '</span></div>';
+      var ks = ' data-key="' + e(it.key) + '" data-set="' + i + '"';
+      // 右端＝そのセットの止め方（限界まで／目標で止めた）。もう一度押すと外れる
+      rows += '<div class="set"><span class="no">' + (i + 1) + 'セット目' + (pv !== '' ? '<small>前回 ' + pv + '</small>' : '') + '</span>' +
+        '<button class="step"' + ks + ' data-d="-1" aria-label="1回減らす">−</button>' +
+        '<input type="number" inputmode="numeric" min="0" max="999"' + ks + ' value="' + (UI.has(cur[i]) ? cur[i] : '') + '" placeholder="' + pv + '">' +
+        '<button class="step"' + ks + ' data-d="1" aria-label="1回増やす">＋</button>' +
+        '<span class="stops">' +
+        '<button' + ks + ' data-stop="限界"' + (st[i] === '限界' ? ' class="on"' : '') + '>限界</button>' +
+        '<button' + ks + ' data-stop="目標"' + (st[i] === '目標' ? ' class="on"' : '') + '>目標</button>' +
+        '</span></div>';
     }
     return '<div class="box ex">' + head + rows + '<div class="ex-total" data-total="' + e(it.key) + '">' + totalLine(it) + '</div></div>';
   }
@@ -79,16 +90,14 @@ var Kintore = (function () {
       (p.prevComment ? '<div class="comment"><b>💬 前回のクロコのコメント</b>' + e(p.prevComment) + '</div>' : '') +
       '</div>' +
       p.items.map(itemHtml).join('') +
-      '<div class="box"><h2>やり方の記録</h2>' +
-      '<div class="q">静止・テンポ（1秒静止／3秒下ろし）</div>' + choice('tempo', [['あり', 'やった'], ['一部', '一部だけ'], ['なし', 'やってない']]) +
-      '<div class="q">止め方</div>' + choice('stop', [['限界', '限界まで'], ['目標止め', '目標で止めた']]) +
-      '<div class="q">メモ（体調・変えたことなど）</div><textarea id="kinMemo" rows="2">' + e(draft.memo) + '</textarea>' +
+      '<div class="box"><h2>メモと日付</h2>' +
+      '<div class="q">メモ（体調・変えたこと・静止やテンポができなかった種目など）</div><textarea id="kinMemo" rows="2">' + e(draft.memo) + '</textarea>' +
       '<div class="q">日付</div><select id="kinDate">' + dates.map(function (d, i) {
         return '<option value="' + d + '"' + (d === sel ? ' selected' : '') + '>' + UI.mdw(d) + (i === 0 ? '（今日）' : '') + '</option>';
       }).join('') + '</select>' +
       '</div>' +
       '<button id="kinSave" class="btn wide big">この内容で保存する</button>' +
-      '<p class="note">＋を押すと前回の回数から始まります。途中でアプリを閉じても入力は残ります。</p>';
+      '<p class="note">＋を押すと前回の回数から始まります。限界＝もう上がらないところまで／目標＝目標の回数で止めた。途中でアプリを閉じても入力は残ります。</p>';
   }
 
   function recentHtml() {
@@ -96,9 +105,10 @@ var Kintore = (function () {
     return '<div class="box"><h2>最近の記録</h2>' + plan.recent.map(function (r) {
       var items = (plan.plans[r.menu] || { items: [] }).items;
       var lines = items.filter(function (it) { return r.body[it.key] !== undefined; }).map(function (it) {
-        return '<div class="rec-line"><span>' + e(it.name) + '</span><b>' + reps(r.body[it.key]) + '</b></div>';
+        return '<div class="rec-line"><span>' + e(it.name) + '</span><b>' + reps(r.body[it.key], (r.body._stop || {})[it.key]) + '</b></div>';
       }).join('');
-      var tags = [r.tempo ? '静止・テンポ：' + r.tempo : '', r.stop ? r.stop : ''].filter(Boolean).join('／');
+      // セットごとの止め方がある記録（11/13〜）は回数の横に出るので、まとめの1行は出さない
+      var tags = r.body._stop ? '' : (r.stop || '');
       var comment = r.comment ? '<div class="comment"><b>💬 クロコのコメント</b>' + e(r.comment) + '</div>' :
         r.commentState === '待ち' ? '<div class="comment wait">💬 クロコのコメント待ち（PCが動いているときに1時間おき）</div>' : '';
       var del = String(r.id).indexOf('seed') === 0 ? '' : '<button class="link" data-del="' + e(r.id) + '">この記録を取り消す</button>';
@@ -136,24 +146,32 @@ var Kintore = (function () {
 
   function save() {
     var menu = draft.menu || plan.next;
-    var items = {}, filled = 0, holes = 0;
+    var items = {}, stops = {}, all = [], filled = 0, holes = 0;
     currentItems().forEach(function (it) {
       var v = draft.items[it.key];
       if (!it.sets) { if (v === true) { items[it.key] = true; filled++; } return; }
-      var a = [];
+      var a = [], s = [];
+      var ds = Array.isArray(draft.stops[it.key]) ? draft.stops[it.key] : [];
       for (var i = 0; i < it.sets; i++) {
         var n = Array.isArray(v) && UI.has(v[i]) ? Number(v[i]) : null;
-        if (n === null) holes++; else { a.push(n); filled++; }
+        if (n === null) holes++; else { a.push(n); s.push(ds[i] || ''); if (ds[i]) all.push(ds[i]); filled++; }
       }
       if (a.length) items[it.key] = a;
+      if (s.some(Boolean)) stops[it.key] = s;
     });
+    // セットごとの止め方は items._stop に（回数の並びと同じ順）。全体の「止め方」はそのまとめ
+    if (Object.keys(stops).length) items._stop = stops;
+    var allLimit = all.length && all.every(function (x) { return x === '限界'; });
+    var allGoal = all.length && all.every(function (x) { return x === '目標'; });
+    var stopSum = !all.length ? '' : allLimit ? '限界' : allGoal ? '目標止め' : '混在';
     if (!filled) { UI.toast('回数がまだ入っていません'); return; }
     if (holes && !confirm('入っていないセットが' + holes + 'つあります。このまま保存しますか？')) return;
     var btn = document.getElementById('kinSave');
     btn.disabled = true;
     btn.textContent = '保存中…';
     var date = document.getElementById('kinDate').value;
-    API.call('kintoreSave', { menu: menu, date: date, items: items, tempo: draft.tempo, stop: draft.stop, memo: draft.memo })
+    // 静止・テンポは11/13から「必ずやる」前提（できなかったときはメモに書く）＝選ぶ欄はなくした
+    API.call('kintoreSave', { menu: menu, date: date, items: items, tempo: 'あり', stop: stopSum, memo: draft.memo })
       .then(function () {
         API.store(DRAFT, null);
         draft = loadDraft();
@@ -181,10 +199,14 @@ var Kintore = (function () {
     var t = ev.target.closest('button');
     if (!t) return;
     if (t.dataset.menu) { draft.menu = t.dataset.menu; saveDraft(); render(); return; }
-    if (t.dataset.choice) {
-      draft[t.dataset.choice] = draft[t.dataset.choice] === t.dataset.val ? '' : t.dataset.val;
+    if (t.dataset.stop) {
+      var sk = t.dataset.key, si = Number(t.dataset.set);
+      if (!Array.isArray(draft.stops[sk])) draft.stops[sk] = [];
+      var arr = draft.stops[sk];
+      while (arr.length <= si) arr.push('');
+      arr[si] = arr[si] === t.dataset.stop ? '' : t.dataset.stop;
       saveDraft();
-      t.parentNode.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', draft[t.dataset.choice] === b.dataset.val); });
+      t.parentNode.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', arr[si] === b.dataset.stop); });
       return;
     }
     if (t.dataset.d) {
