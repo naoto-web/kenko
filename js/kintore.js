@@ -11,8 +11,9 @@ var Kintore = (function () {
     var d = null;
     try { d = JSON.parse(API.store(DRAFT) || 'null'); } catch (err) { d = null; }
     // 日付が変わっていたら前の日の途中経過は捨てる
-    if (!d || d.day !== UI.lifeDay()) d = { day: UI.lifeDay(), menu: '', items: {}, stops: {}, memo: '', date: '' };
+    if (!d || d.day !== UI.lifeDay()) d = { day: UI.lifeDay(), menu: '', items: {}, stops: {}, memos: {}, memo: '', date: '' };
     if (!d.stops) d.stops = {};
+    if (!d.memos) d.memos = {};
     return d;
   }
   function saveDraft() { API.store(DRAFT, JSON.stringify(draft)); }
@@ -45,10 +46,12 @@ var Kintore = (function () {
   function itemHtml(it) {
     var head = '<div class="ex-head"><b>' + e(it.name) + '</b>' + (it.range ? '<span class="range">目標 ' + e(it.range) + '回</span>' : '') + '</div>' +
       (it.note ? '<div class="ex-note">' + e(it.note) + '</div>' : '');
+    // 種目ごとのメモ（全体のメモは下に別にある）
+    var memo = '<input type="text" class="ex-memo" data-memo="' + e(it.key) + '" maxlength="120" placeholder="この種目のメモ" value="' + e(draft.memos[it.key] || '') + '">';
     if (!it.sets) {
       // 回数のない種目（プランク）＝やったらチェック
       return '<div class="box ex">' + head + '<label class="check"><input type="checkbox" data-check="' + e(it.key) + '"' + (draft.items[it.key] === true ? ' checked' : '') + '> やった' +
-        (it.prev === true ? '<small>（前回もやった）</small>' : '') + '</label></div>';
+        (it.prev === true ? '<small>（前回もやった）</small>' : '') + '</label>' + memo + '</div>';
     }
     var cur = Array.isArray(draft.items[it.key]) ? draft.items[it.key] : [];
     var st = Array.isArray(draft.stops[it.key]) ? draft.stops[it.key] : [];
@@ -66,7 +69,7 @@ var Kintore = (function () {
         '<button' + ks + ' data-stop="目標"' + (st[i] === '目標' ? ' class="on"' : '') + '>目標</button>' +
         '</span></div>';
     }
-    return '<div class="box ex">' + head + rows + '<div class="ex-total" data-total="' + e(it.key) + '">' + totalLine(it) + '</div></div>';
+    return '<div class="box ex">' + head + rows + '<div class="ex-total" data-total="' + e(it.key) + '">' + totalLine(it) + '</div>' + memo + '</div>';
   }
 
   function choice(name, opts) {
@@ -91,7 +94,7 @@ var Kintore = (function () {
       '</div>' +
       p.items.map(itemHtml).join('') +
       '<div class="box"><h2>メモと日付</h2>' +
-      '<div class="q">メモ（体調・変えたこと・静止やテンポができなかった種目など）</div><textarea id="kinMemo" rows="2">' + e(draft.memo) + '</textarea>' +
+      '<div class="q">全体のメモ（体調・時間・変えたことなど）</div><textarea id="kinMemo" rows="2">' + e(draft.memo) + '</textarea>' +
       '<div class="q">日付</div><select id="kinDate">' + dates.map(function (d, i) {
         return '<option value="' + d + '"' + (d === sel ? ' selected' : '') + '>' + UI.mdw(d) + (i === 0 ? '（今日）' : '') + '</option>';
       }).join('') + '</select>' +
@@ -105,7 +108,9 @@ var Kintore = (function () {
     return '<div class="box"><h2>最近の記録</h2>' + plan.recent.map(function (r) {
       var items = (plan.plans[r.menu] || { items: [] }).items;
       var lines = items.filter(function (it) { return r.body[it.key] !== undefined; }).map(function (it) {
-        return '<div class="rec-line"><span>' + e(it.name) + '</span><b>' + reps(r.body[it.key], (r.body._stop || {})[it.key]) + '</b></div>';
+        var m = (r.body._memo || {})[it.key];
+        return '<div class="rec-line"><span>' + e(it.name) + '</span><b>' + reps(r.body[it.key], (r.body._stop || {})[it.key]) + '</b></div>' +
+          (m ? '<div class="rec-memo">📝 ' + e(m) + '</div>' : '');
       }).join('');
       // セットごとの止め方がある記録（11/13〜）は回数の横に出るので、まとめの1行は出さない
       var tags = r.body._stop ? '' : (r.stop || '');
@@ -161,6 +166,13 @@ var Kintore = (function () {
     });
     // セットごとの止め方は items._stop に（回数の並びと同じ順）。全体の「止め方」はそのまとめ
     if (Object.keys(stops).length) items._stop = stops;
+    // 種目ごとのメモは items._memo に（記録した種目のぶんだけ）
+    var memos = {};
+    currentItems().forEach(function (it) {
+      var m = String(draft.memos[it.key] || '').trim();
+      if (m) memos[it.key] = m;
+    });
+    if (Object.keys(memos).length) items._memo = memos;
     var allLimit = all.length && all.every(function (x) { return x === '限界'; });
     var allGoal = all.length && all.every(function (x) { return x === '目標'; });
     var stopSum = !all.length ? '' : allLimit ? '限界' : allGoal ? '目標止め' : '混在';
@@ -239,6 +251,8 @@ var Kintore = (function () {
     var t = ev.target;
     if (t.dataset.key && t.type === 'number') {
       setRep(t.dataset.key, Number(t.dataset.set), t.value === '' ? null : Math.max(0, Math.round(Number(t.value))));
+    } else if (t.dataset.memo) {
+      draft.memos[t.dataset.memo] = t.value; saveDraft();
     } else if (t.id === 'kinMemo') {
       draft.memo = t.value; saveDraft();
     }
