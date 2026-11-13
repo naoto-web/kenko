@@ -10,6 +10,13 @@ var Home = (function () {
     }).join('');
   }
 
+  // クロコから（1日1通・PCの分析役が朝の体重が届いたあとに書く）
+  function messageCard(m, today) {
+    if (!m || !m.text) return '';
+    return '<div class="box msg"><h2>💬 クロコから　<small>' + UI.md(m.date) + (m.date === today ? '' : '（今日の分はまだ）') + '</small></h2>' +
+      '<p>' + e(m.text) + '</p></div>';
+  }
+
   function goalCard(g) {
     if (!UI.has(g.current)) return '<div class="box"><h2>🎯 目標</h2><p class="note">体重のデータが足りません</p></div>';
     var done = g.startWeight > g.target ? (g.startWeight - g.current) / (g.startWeight - g.target) : 0;
@@ -112,7 +119,7 @@ var Home = (function () {
   function render(r) {
     document.getElementById('homeBody').innerHTML =
       '<p class="datehead">' + UI.mdw(r.today) + '</p>' +
-      missing(r.missing) + goalCard(r.goal) + bodyCard(r.body, r) + dayCard(r) + weekCard(r.week, r.today) + foodCard(r.food) +
+      messageCard(r.message, r.today) + missing(r.missing) + goalCard(r.goal) + bodyCard(r.body, r) + dayCard(r) + weekCard(r.week, r.today) + foodCard(r.food) +
       '<p class="note foot">更新 ' + e(String(r.now).substring(5, 16).replace('-', '/')) + (r.jobLast ? '　分析役が最後に動いた時刻 ' + e(r.jobLast) : '') + '</p>';
   }
 
