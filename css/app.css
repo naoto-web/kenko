@@ -152,6 +152,18 @@ textarea { resize: vertical; }
 .datenav .btn { padding: 6px 10px; font-size: 13px; }
 .tiles.four { grid-template-columns: repeat(4, 1fr); margin-top: 8px; }
 .tile .val.small { font-size: 17px; }
+.nrow { margin-top: 9px; }
+.nrow:first-of-type { margin-top: 0; }
+.nrow-head { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--fg-dim); }
+.nrow-head .nl { flex: none; width: 5.2em; color: var(--fg); font-weight: 600; font-size: 13.5px; }
+.nrow-head .nv { flex: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nrow-head .nv b { color: var(--fg); font-size: 16px; }
+.nrow-head .ns { flex: none; font-weight: 600; }
+.nrow .meter { margin: 3px 0 0; }
+.nrow.good .ns { color: var(--ok); }
+.nrow.good .meter i { background: var(--ok); }
+.nrow.over .ns { color: var(--late); }
+.nrow.over .meter i { background: var(--late); }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
 .teibans { display: flex; flex-wrap: wrap; gap: 8px; }
 .teiban { text-align: left; }
