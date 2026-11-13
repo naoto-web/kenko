@@ -100,7 +100,7 @@ var Kintore = (function () {
       }).join('');
       var tags = [r.tempo ? '静止・テンポ：' + r.tempo : '', r.stop ? r.stop : ''].filter(Boolean).join('／');
       var comment = r.comment ? '<div class="comment"><b>💬 クロコのコメント</b>' + e(r.comment) + '</div>' :
-        r.commentState === '待ち' ? '<div class="comment wait">💬 クロコのコメント待ち（コメントの仕組みは11/13に入ります）</div>' : '';
+        r.commentState === '待ち' ? '<div class="comment wait">💬 クロコのコメント待ち（PCが動いているときに1時間おき）</div>' : '';
       var del = String(r.id).indexOf('seed') === 0 ? '' : '<button class="link" data-del="' + e(r.id) + '">この記録を取り消す</button>';
       return '<div class="rec"><div class="rec-head"><b>' + UI.mdw(r.date) + '　' + e(r.menu) + '</b>' + del + '</div>' + lines +
         (tags ? '<div class="note">' + e(tags) + '</div>' : '') + (r.memo ? '<div class="note">📝 ' + e(r.memo) + '</div>' : '') + comment + '</div>';
