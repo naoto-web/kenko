@@ -12,10 +12,7 @@ var Main = (function () {
     });
   }
 
-  function loadFood() {
-    document.getElementById('foodBody').innerHTML = '<div class="empty"><b>🍚 食事の記録</b>写真で撮る・定番ボタン・今日の合計は<br>11/13（金）に入ります</div>';
-    return Promise.resolve();
-  }
+  function loadFood() { return Food.load(); }
 
   function reload() {
     var btn = document.getElementById('reloadBtn');
@@ -62,9 +59,10 @@ var Main = (function () {
     if (b) show(b.dataset.go);
   });
 
-  // 戻ってきたとき、5分以上たっていたら読み直す（筋トレは入力中なので読み直さない）
+  // 戻ってきたとき、5分以上たっていたら読み直す（筋トレは入力中なので読み直さない・食事は写真の確認中だけ読み直さない）
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible' && tab === 'home' && Date.now() - lastLoad > 5 * 60000) reload();
+    if (document.visibilityState !== 'visible' || Date.now() - lastLoad < 5 * 60000) return;
+    if (tab === 'home' || (tab === 'food' && !Food.busy())) reload();
   });
 
   // アプリとしてインストール
