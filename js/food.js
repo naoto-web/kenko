@@ -9,6 +9,9 @@ var Food = (function () {
   // 登録の前の確認中の1件 { kind:'photo'|'text'|'teiban', image, name, memo, time, share }
   var entry = null;
   var sending = false;
+  // 開いている写真（記録のid）と、取ってきた写真の控え（写真のid → { image } / { error }）
+  var photoOpen = {};
+  var photoCache = {};
 
   function g(v, k) { return UI.has(v) ? UI.num(v, k) : '—'; }
 
@@ -85,21 +88,51 @@ var Food = (function () {
       '</div>';
   }
 
+  // 見出しは料理名だけ。量と「2人で分けた」は下の小さい行へ
+  //   分析した品は 中身（detail）に元の料理名と量がある。シートの料理名は「料理名（量）」＋半分にした印（×½）
+  function view(m) {
+    var d = m.detail;
+    if (!d || !d.name) return { title: m.name, sub: m.memo || '' };
+    var half = (String(m.name).match(/(×½)+$/) || [''])[0];
+    var amt = String(d.amount || '');
+    var share = !!d.share || /^2人分の半分/.test(amt);
+    amt = amt.replace(/^2人分の半分[・、\s]*/, '');
+    var parts = [];
+    if (amt) parts.push(amt + (half ? ' ' + half : ''));
+    if (share) parts.push('2人で分けた');
+    if (m.memo) parts.push(m.memo);
+    return { title: d.name + (amt ? '' : half), sub: parts.join('・') };
+  }
+
+  // 写真つきの記録＝「写真」を押すと、その場に出す（もう一度押すと閉じる）
+  function photoLink(m) {
+    return m.photo ? '<button class="link" data-photo="' + e(m.id) + '">' + (photoOpen[m.id] ? '写真を閉じる' : '写真') + '</button>' : '';
+  }
+
+  function photoBox(m) {
+    if (!m.photo || !photoOpen[m.id]) return '';
+    var p = photoCache[m.photo];
+    if (!p) return '<div class="note">写真を読み込み中…</div>';
+    if (p.error) return '<div class="note">写真を出せませんでした：' + e(p.error) + '</div>';
+    return '<img class="shot rec-shot" src="data:image/jpeg;base64,' + p.image + '" alt="">';
+  }
+
   function itemHtml(m) {
+    var v = view(m);
     // 時刻はその場で直せる（食べた時刻）
-    var head = '<div class="rec-head"><b>' + e(m.name) + '</b><input type="time" class="rec-time" data-time="' + e(m.id) + '" value="' + e(m.time) + '" aria-label="食べた時刻"></div>';
+    var head = '<div class="rec-head"><b>' + e(v.title) + '</b><input type="time" class="rec-time" data-time="' + e(m.id) + '" value="' + e(m.time) + '" aria-label="食べた時刻"></div>';
     if (m.state === '未分析') {
-      return '<div class="rec">' + head + '<div class="note">⏳ 分析待ち' + (m.memo ? '　📝 ' + e(m.memo) : '') + '</div>' +
-        '<div class="rec-acts"><button class="link" data-del="' + e(m.id) + '">消す</button></div></div>';
+      return '<div class="rec">' + head + '<div class="note">⏳ 分析待ち' + (m.memo ? '　📝 ' + e(m.memo) : '') + '</div>' + photoBox(m) +
+        '<div class="rec-acts">' + photoLink(m) + '<button class="link" data-del="' + e(m.id) + '">消す</button></div></div>';
     }
     if (m.state === '分析失敗') {
-      return '<div class="rec">' + head + (m.memo ? '<div class="note">' + e(m.memo) + '</div>' : '') +
-        '<div class="rec-acts"><button class="link" data-del="' + e(m.id) + '">消す</button></div></div>';
+      return '<div class="rec">' + head + (m.memo ? '<div class="note">' + e(m.memo) + '</div>' : '') + photoBox(m) +
+        '<div class="rec-acts">' + photoLink(m) + '<button class="link" data-del="' + e(m.id) + '">消す</button></div></div>';
     }
     var nums = 'たんぱく質 <b>' + g(m.protein, 0) + 'g</b>　' + g(m.kcal, 0) + 'kcal　脂質 ' + g(m.fat, 0) + 'g　繊維 ' + g(m.fiber, 1) + 'g　塩 ' + g(m.salt, 1) + 'g';
     return '<div class="rec">' + head + '<div class="nut">' + nums + '</div>' +
-      (m.memo ? '<div class="note">' + e(m.memo) + '</div>' : '') +
-      '<div class="rec-acts"><button class="link" data-half="' + e(m.id) + '">半分にする</button><button class="link" data-del="' + e(m.id) + '">消す</button></div></div>';
+      (v.sub ? '<div class="note">' + e(v.sub) + '</div>' : '') + photoBox(m) +
+      '<div class="rec-acts">' + photoLink(m) + '<button class="link" data-half="' + e(m.id) + '">半分にする</button><button class="link" data-del="' + e(m.id) + '">消す</button></div></div>';
   }
 
   function listCard() {
@@ -203,9 +236,24 @@ var Food = (function () {
     if (t.id === 'foodPrev') { date = UI.addDays(date, -1); data = null; reloadQuiet(); return; }
     if (t.id === 'foodNext') { date = UI.addDays(date, 1); data = null; reloadQuiet(); return; }
     if (t.dataset.teiban) { entry = { kind: 'teiban', name: t.dataset.teiban, time: nowHm() }; render(); return; }
+    if (t.dataset.photo) {
+      var pm = find(t.dataset.photo);
+      if (!pm || !pm.photo) return;
+      photoOpen[pm.id] = !photoOpen[pm.id];
+      var pid = pm.photo;
+      if (photoOpen[pm.id] && (!photoCache[pid] || photoCache[pid].error)) {
+        delete photoCache[pid];
+        API.call('photo', { photo: pid })
+          .then(function (res) { photoCache[pid] = { image: res.image }; })
+          .catch(function (err) { photoCache[pid] = { error: err.message }; })
+          .then(function () { if (!busy()) render(); });
+      }
+      render();
+      return;
+    }
     if (t.dataset.half) {
       var m = find(t.dataset.half);
-      if (!m || !confirm('「' + m.name + '」の量を半分にしますか？')) return;
+      if (!m || !confirm('「' + view(m).title + '」の量を半分にしますか？')) return;
       t.disabled = true;
       API.call('editMeal', { id: m.id, factor: 0.5, name: m.name + '×½' })
         .then(reloadQuiet)
@@ -214,7 +262,7 @@ var Food = (function () {
     }
     if (t.dataset.del) {
       var d = find(t.dataset.del);
-      if (!d || !confirm('「' + d.name + '」を本当に消しますか？（元に戻せません）')) return;
+      if (!d || !confirm('「' + view(d).title + '」を本当に消しますか？（元に戻せません）')) return;
       t.disabled = true;
       API.call('editMeal', { id: d.id, remove: true })
         .then(reloadQuiet)
