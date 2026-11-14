@@ -185,6 +185,7 @@ input[type="text"] { width: 100%; border: 1px solid var(--line); background: var
 input[type="time"]#foodTime { border: 1px solid var(--line); background: var(--sunk); border-radius: 10px; padding: 9px 10px; margin-bottom: 8px; font-size: 16px; }
 .nut { font-size: 12.5px; color: var(--fg-dim); }
 .nut b { color: var(--fg); font-size: 14px; }
+.rec-shot { margin: 8px 0 4px; }
 .rec-acts { display: flex; justify-content: flex-end; gap: 16px; }
 
 /* グラフ */
