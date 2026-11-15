@@ -11,12 +11,32 @@ var Kintore = (function () {
     var d = null;
     try { d = JSON.parse(API.store(DRAFT) || 'null'); } catch (err) { d = null; }
     // 日付が変わっていたら前の日の途中経過は捨てる
-    if (!d || d.day !== UI.lifeDay()) d = { day: UI.lifeDay(), menu: '', items: {}, stops: {}, memos: {}, memo: '', date: '' };
+    if (!d || d.day !== UI.lifeDay()) d = { day: UI.lifeDay(), menu: '', items: {}, stops: {}, memos: {}, memo: '', date: '', start: '', end: '' };
+    if (!d.start) d.start = '';
+    if (!d.end) d.end = '';
     if (!d.stops) d.stops = {};
     if (!d.memos) d.memos = {};
     return d;
   }
   function saveDraft() { API.store(DRAFT, JSON.stringify(draft)); }
+
+  // いまの時刻を HH:mm で
+  function nowHm() {
+    var d = new Date();
+    return (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
+  }
+  // 開始〜終了の分（終了が前なら日またぎ）
+  function spanMin(s, t) {
+    var a = s.split(':'), b = t.split(':');
+    var m = (Number(b[0]) * 60 + Number(b[1])) - (Number(a[0]) * 60 + Number(a[1]));
+    return m <= 0 ? m + 1440 : m;
+  }
+  // 開始・終了の1行（時刻の欄＋「今」ボタン）
+  function timeRow(which, label) {
+    return '<div class="timerow"><span>' + label + '</span>' +
+      '<input type="time" data-time="' + which + '" value="' + e(draft[which] || '') + '">' +
+      '<button class="btn sub" data-now="' + which + '">今</button></div>';
+  }
 
   function sum(a) {
     if (!Array.isArray(a)) return 0;
@@ -91,9 +111,12 @@ var Kintore = (function () {
       '<p class="note">' + (plan.last ? '前回は ' + UI.mdw(plan.last.date) + ' の' + e(plan.last.menu) + '。' : '') +
       (p.prevDate ? 'この' + e(menu) + 'の前回は ' + UI.mdw(p.prevDate) + '。超えられたら超える。' : 'このメニューは初めてです。') + '</p>' +
       (p.prevComment ? '<div class="comment"><b>💬 前回のクロコのコメント</b>' + e(p.prevComment) + '</div>' : '') +
+      timeRow('start', '開始') +
       '</div>' +
       p.items.map(itemHtml).join('') +
-      '<div class="box"><h2>メモと日付</h2>' +
+      '<div class="box"><h2>時間・メモ・日付</h2>' +
+      timeRow('start', '開始') + timeRow('end', '終了') +
+      '<p class="note">開始と終了を入れて保存すると、カレンダーの筋トレの予定が実際の時間に直って✅が付きます。終了が空なら、保存した時刻が終了になります（日付が今日のとき）。</p>' +
       '<div class="q">全体のメモ（体調・時間・変えたことなど）</div><textarea id="kinMemo" rows="2">' + e(draft.memo) + '</textarea>' +
       '<div class="q">日付</div><select id="kinDate">' + dates.map(function (d, i) {
         return '<option value="' + d + '"' + (d === sel ? ' selected' : '') + '>' + UI.mdw(d) + (i === 0 ? '（今日）' : '') + '</option>';
@@ -117,7 +140,12 @@ var Kintore = (function () {
       var comment = r.comment ? '<div class="comment"><b>💬 クロコのコメント</b>' + e(r.comment) + '</div>' :
         r.commentState === '待ち' ? '<div class="comment wait">💬 クロコのコメント待ち（PCが動いているときに1時間おき）</div>' : '';
       var del = String(r.id).indexOf('seed') === 0 ? '' : '<button class="link" data-del="' + e(r.id) + '">この記録を取り消す</button>';
-      return '<div class="rec"><div class="rec-head"><b>' + UI.mdw(r.date) + '　' + e(r.menu) + '</b>' + del + '</div>' + lines +
+      // 開始・終了の時刻（11/15〜）。カレンダーに書けなかったときだけ理由を出す
+      var tm = r.body._time;
+      var calNg = r.cal && (r.cal.indexOf('失敗') === 0 || r.cal.indexOf('反映せず') === 0);
+      var timeLine = tm ? '<div class="note">🕒 ' + e(tm.start) + '〜' + e(tm.end) + '（' + spanMin(tm.start, tm.end) + '分）' +
+        (calNg ? '　⚠️カレンダー：' + e(r.cal) : r.cal ? '　📅✅' : '') + '</div>' : '';
+      return '<div class="rec"><div class="rec-head"><b>' + UI.mdw(r.date) + '　' + e(r.menu) + '</b>' + del + '</div>' + timeLine + lines +
         (tags ? '<div class="note">' + e(tags) + '</div>' : '') + (r.memo ? '<div class="note">📝 ' + e(r.memo) + '</div>' : '') + comment + '</div>';
     }).join('') + '</div>';
   }
@@ -177,18 +205,29 @@ var Kintore = (function () {
     var allGoal = all.length && all.every(function (x) { return x === '目標'; });
     var stopSum = !all.length ? '' : allLimit ? '限界' : allGoal ? '目標止め' : '混在';
     if (!filled) { UI.toast('回数がまだ入っていません'); return; }
+    var date = document.getElementById('kinDate').value;
+    // 開始・終了の時刻。終了が空なら、今日の記録にかぎり「いま」を終了にする
+    var st = draft.start || '', en = draft.end || '';
+    if (st && !en) {
+      if (date === UI.lifeDay()) en = nowHm();
+      else { UI.toast('終了の時刻を入れてください'); return; }
+    }
+    if (en && !st) { UI.toast('開始の時刻を入れてください'); return; }
+    if (st && en && spanMin(st, en) > 240 && !confirm('開始 ' + st + '〜終了 ' + en + '（' + spanMin(st, en) + '分）になっています。このまま保存しますか？')) return;
     if (holes && !confirm('入っていないセットが' + holes + 'つあります。このまま保存しますか？')) return;
     var btn = document.getElementById('kinSave');
     btn.disabled = true;
     btn.textContent = '保存中…';
-    var date = document.getElementById('kinDate').value;
     // 静止・テンポは11/13から「必ずやる」前提（できなかったときはメモに書く）＝選ぶ欄はなくした
-    API.call('kintoreSave', { menu: menu, date: date, items: items, tempo: 'あり', stop: stopSum, memo: draft.memo })
-      .then(function () {
+    API.call('kintoreSave', { menu: menu, date: date, items: items, tempo: 'あり', stop: stopSum, memo: draft.memo, start: st, end: en })
+      .then(function (res) {
         API.store(DRAFT, null);
         draft = loadDraft();
         again = false;
-        UI.toast('保存しました');
+        var cal = (res && res.cal) || '';
+        UI.toast(!cal ? '保存しました' :
+          (cal.indexOf('失敗') === 0 || cal.indexOf('反映せず') === 0) ? '保存しました（カレンダーは' + cal + '）' :
+          '保存しました・カレンダーに✅（' + st + '〜' + en + '）');
         return load();
       })
       .then(function () { window.scrollTo(0, 0); })
@@ -211,6 +250,13 @@ var Kintore = (function () {
     var t = ev.target.closest('button');
     if (!t) return;
     if (t.dataset.menu) { draft.menu = t.dataset.menu; saveDraft(); render(); return; }
+    if (t.dataset.now) {
+      // 「今」＝いまの時刻を入れる（開始の欄は上と下の2か所にあるので両方そろえる）
+      draft[t.dataset.now] = nowHm();
+      saveDraft();
+      body.querySelectorAll('input[data-time="' + t.dataset.now + '"]').forEach(function (el) { el.value = draft[t.dataset.now]; });
+      return;
+    }
     if (t.dataset.stop) {
       var sk = t.dataset.key, si = Number(t.dataset.set);
       if (!Array.isArray(draft.stops[sk])) draft.stops[sk] = [];
@@ -260,7 +306,11 @@ var Kintore = (function () {
 
   body.addEventListener('change', function (ev) {
     var t = ev.target;
-    if (t.dataset.check) {
+    if (t.dataset.time) {
+      draft[t.dataset.time] = t.value;
+      saveDraft();
+      body.querySelectorAll('input[data-time="' + t.dataset.time + '"]').forEach(function (el) { if (el !== t) el.value = t.value; });
+    } else if (t.dataset.check) {
       if (t.checked) draft.items[t.dataset.check] = true; else delete draft.items[t.dataset.check];
       saveDraft();
     } else if (t.id === 'kinDate') {
