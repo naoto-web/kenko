@@ -38,6 +38,17 @@ var Food = (function () {
       '<div class="meter"><i style="width:' + pct.toFixed(1) + '%"></i></div></div>';
   }
 
+  // 目安をいつ・なぜ変えたか（毎週月曜に自動で見直す・要件定義 §11.5）
+  function targetNote() {
+    var n = data.targetNote;
+    if (!n) return '';
+    var lines = [];
+    if (n.last) lines.push(e(n.last));
+    if (n.lastChange) lines.push('前に変えたとき：' + e(n.lastChange));
+    lines.push('目安は毎週月曜に自動で見直します（次は ' + UI.md(n.next) + '）');
+    return '<div class="tnote"><b>目安の見直し</b>' + lines.join('<br>') + '</div>';
+  }
+
   function totalCard() {
     var t = data.total;
     var T = data.targets || { kcal: 1400, protein: 80, fat: 40, sugar: 180, fiber: 21, salt: 7.5 };
@@ -51,6 +62,7 @@ var Food = (function () {
       nutRow('食物繊維', t.fiber, T.fiber, 'g', 1, 'min') +
       nutRow('食塩', t.salt, T.salt, 'g', 1, 'max') +
       (t.pending ? '<p class="note">⏳ 分析待ち ' + t.pending + '件（合計にはまだ入っていません）</p>' : '') +
+      targetNote() +
       '</div>';
   }
 
