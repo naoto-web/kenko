@@ -17,6 +17,23 @@ var Trend = (function () {
   var LG_DOT = '<span><i class="lg dot"></i>その日の値</span>';
   var LG_MA = '<span><i class="lg ma"></i>7日平均</span>';
 
+  // これまでの見立て（新しい順・月曜ごとに1件ずつ増える）
+  function weeklyBox(list) {
+    if (!list || !list.length) return '';
+    var e = UI.esc;
+    return '<div class="box"><h2>📋 これまでの見立て</h2>' + list.map(function (w) {
+      var nums = [];
+      if (UI.has(w.paceKg)) nums.push('体重 ' + UI.signed(w.paceKg, 2) + 'kg' + (UI.has(w.lossPct) ? '（' + UI.num(Math.abs(w.lossPct), 1) + '%' + (w.lossPct < 0 ? '増' : '減') + '）' : ''));
+      if (w.mealDays) nums.push('たんぱく質 ' + w.proteinOkDays + '／' + w.mealDays + '日');
+      nums.push('筋トレ ' + w.kintoreCount + '回' + (w.kintoreTrend === '比較なし' ? '' : '・' + w.kintoreTrend));
+      if (UI.has(w.leanDiff)) nums.push('除脂肪 ' + UI.signed(w.leanDiff, 2) + 'kg');
+      return '<div class="rec"><div class="rec-head"><b>' + UI.md(w.week) + '〜' + UI.md(w.to) + '</b><span class="wk-mini">' + e(w.label) + '</span></div>' +
+        '<div class="nut">' + e(nums.join('　')) + '</div>' +
+        (w.text ? '<div class="comment">' + e(w.text) + '</div>' : '') +
+        '<div class="note">' + e(w.reason) + '</div></div>';
+    }).join('') + '</div>';
+  }
+
   function draw() {
     if (!data) return;
     var days = data.days.slice(-range);
@@ -33,6 +50,7 @@ var Trend = (function () {
       card('chLean', '除脂肪（kg）＝守る対象', LG_DOT + LG_MA) +
       card('chSteps', '歩数', '') +
       card('chSleep', '睡眠（時間）', '') +
+      weeklyBox(data.weekly) +
       '<p class="note foot">グラフを指でなぞると、その日の数字が出ます</p>';
 
     // 体のグラフは、測りはじめる前の空白を出さない＝期間内の最初の測定日から描く
