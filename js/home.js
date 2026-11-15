@@ -116,12 +116,36 @@ var Home = (function () {
       '<button class="btn wide" data-go="food" style="margin-top:10px">食事を記録する</button></div>';
   }
 
+  // 今週の見立て（月曜の朝に、前の週の月〜日を判定する・要件定義 §11）
+  function weeklyCard(w) {
+    if (!w) return '';
+    function tile(label, val, sub) {
+      return '<div class="tile"><span class="label">' + label + '</span><span class="val small">' + val + '</span><span class="sub">' + sub + '</span></div>';
+    }
+    var pace = UI.has(w.paceKg) ? UI.signed(w.paceKg, 2) + '<small>kg</small>' : '—';
+    var paceSub = UI.has(w.lossPct) ? '体重の' + UI.num(Math.abs(w.lossPct), 1) + '%' + (w.lossPct < 0 ? '増' : '減') : '体重の記録 ' + w.weightDays + '日';
+    var prot = w.mealDays ? w.proteinOkDays + '<small>／' + w.mealDays + '日</small>' : '—';
+    var protSub = w.mealDays ? '平均' + UI.num(w.proteinAvg, 0) + 'g' : '食事の記録なし';
+    var kin = w.kintoreCount + '<small>回</small>';
+    var kinSub = w.kintoreTrend === '比較なし' ? '前回との比較なし' : '回数は' + e(w.kintoreTrend);
+    var text = w.text ? '<p class="wk-text">' + e(w.text) + '</p>' :
+      w.textWait ? '<p class="note wk-wait">提案の文は、PCの分析役が次に動いたときに入ります</p>' : '';
+    var lean = UI.has(w.leanDiff) ? '<div class="kv"><span>除脂肪（週の平均）</span><span>起点から <b>' + UI.signed(w.leanDiff, 2) + 'kg</b></span></div>' : '';
+    return '<div class="box weekly st-' + e(w.state) + '">' +
+      '<h2>📋 今週の見立て　<small>' + UI.md(w.week) + '〜' + UI.md(w.to) + 'の結果</small></h2>' +
+      '<div class="wk-badge">' + e(w.label) + '</div>' +
+      '<div class="tiles three">' + tile('体重のペース', pace, paceSub) + tile('たんぱく質' + w.proteinTarget + 'g', prot, protSub) + tile('筋トレ', kin, kinSub) + '</div>' +
+      text + lean +
+      '<p class="proj"><span class="wk-dim">食事の目安</span>　' + e(w.reason) + '</p>' +
+      '</div>';
+  }
+
   function render(r) {
     document.getElementById('homeBody').innerHTML =
       '<p class="datehead">' + UI.mdw(r.today) + '</p>' +
-      messageCard(r.message, r.today) + missing(r.missing) + goalCard(r.goal) + bodyCard(r.body, r) + dayCard(r) + weekCard(r.week, r.today) + foodCard(r.food) +
+      messageCard(r.message, r.today) + missing(r.missing) + goalCard(r.goal) + weeklyCard(r.weekly) + bodyCard(r.body, r) + dayCard(r) + weekCard(r.week, r.today) + foodCard(r.food) +
       '<p class="note foot">更新 ' + e(String(r.now).substring(5, 16).replace('-', '/')) + (r.jobLast ? '　分析役が最後に動いた時刻 ' + e(r.jobLast) : '') + '</p>';
   }
 
-  return { render: render };
+  return { render: render, weeklyCard: weeklyCard };
 })();
