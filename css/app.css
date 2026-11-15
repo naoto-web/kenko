@@ -160,6 +160,11 @@ input.ex-memo { margin: 8px 0 0; font-size: 14px; padding: 8px 10px; }
 .check input { width: 22px; height: 22px; accent-color: var(--accent); }
 .check small { font-weight: 400; color: var(--fg-dim); }
 .donebox { border-color: #a9d3bb; background: #eaf5ee; }
+/* 筋トレの開始・終了の時刻 */
+.timerow { display: grid; grid-template-columns: 40px 1fr 64px; gap: 8px; align-items: center; margin-top: 8px; }
+.timerow span { font-size: 13px; color: var(--fg-dim); }
+.timerow input { width: 100%; min-width: 0; height: 44px; border: 1px solid var(--line); background: var(--sunk); border-radius: 10px; padding: 0 10px; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.timerow .btn { height: 44px; padding: 0; }
 
 /* 最近の記録 */
 .rec { border-top: 1px solid var(--line); padding: 9px 0; }
