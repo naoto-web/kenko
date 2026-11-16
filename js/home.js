@@ -107,7 +107,23 @@ var Home = (function () {
       '<button class="btn wide" data-go="kintore">筋トレを記録する</button></div>';
   }
 
-  function foodCard(f) {
+  // 収支＝食べた − 使った（マイナスなら減る側）。使った＝ふだんの消費＋歩いた日＋筋トレの日
+  function balanceRows(b) {
+    if (!b) return '';
+    function row(label, d) {
+      var used = '使った ' + UI.comma(d.burn) + '<small>（ふだん' + UI.comma(d.base) + (d.walk ? '＋歩く' + d.walk : '') + (d.kintore ? '＋筋トレ' + d.kintore : '') + '）</small>';
+      if (d.intake === null) return '<div class="kv"><span>' + label + '</span><span>食事の記録なし</span></div>';
+      var net = d.net > 0 ? '<b style="color:var(--late)">＋' + UI.comma(d.net) + 'kcal</b>' : '<b>−' + UI.comma(-d.net) + 'kcal</b>';
+      return '<div class="kv"><span>' + label + '</span><span>' + net + '</span></div>' +
+        '<p class="note" style="margin:0 0 6px">食べた ' + UI.comma(d.intake) + ' − ' + used + '</p>';
+    }
+    return '<div class="q">収支（食べた − 使った）</div>' +
+      row('きのう ' + UI.md(b.yesterday.date), b.yesterday) +
+      row('今日（途中）', b.today) +
+      (b.needPerDay ? '<p class="note">1日 −' + UI.comma(b.needPerDay) + 'kcal が続くと12/23に届く計算です。' + (b.measured ? '' : '「ふだん」は仮の数字（11/30ごろ実測に置き換え）。') + '</p>' : '');
+  }
+
+  function foodCard(f, b) {
     // 主役はカロリー（11/16 Naoto）。たんぱく質は下の小さい行
     var kc = Math.round(f.total.kcal || 0), kt = (f.targets && f.targets.kcal) || 1400;
     var p = f.total.protein || 0, target = f.proteinTarget;
@@ -118,6 +134,7 @@ var Home = (function () {
       '<div class="meter"><i style="width:' + pct.toFixed(1) + '%' + (over ? ';background:var(--late)' : '') + '"></i></div>' +
       '<p class="note">' + rest + '　／　たんぱく質 ' + Math.round(p) + 'g／' + target + 'g' + (p >= target ? '（達成）' : '') + '</p>' +
       (f.total.pending ? '<p class="note">⏳ 分析待ち ' + f.total.pending + '件</p>' : '') +
+      balanceRows(b) +
       '<button class="btn wide" data-go="food" style="margin-top:10px">食事を記録する</button></div>';
   }
 
@@ -148,7 +165,7 @@ var Home = (function () {
   function render(r) {
     document.getElementById('homeBody').innerHTML =
       '<p class="datehead">' + UI.mdw(r.today) + '</p>' +
-      messageCard(r.message, r.today) + missing(r.missing) + goalCard(r.goal) + weeklyCard(r.weekly) + bodyCard(r.body, r) + dayCard(r) + weekCard(r.week, r.today) + foodCard(r.food) +
+      messageCard(r.message, r.today) + missing(r.missing) + goalCard(r.goal) + weeklyCard(r.weekly) + bodyCard(r.body, r) + dayCard(r) + weekCard(r.week, r.today) + foodCard(r.food, r.balance) +
       '<p class="note foot">更新 ' + e(String(r.now).substring(5, 16).replace('-', '/')) + (r.jobLast ? '　分析役が最後に動いた時刻 ' + e(r.jobLast) : '') + '</p>';
   }
 
