@@ -158,22 +158,12 @@ var Food = (function () {
   // 運動の消費の一覧（11/16 Naoto＝「これを食べるならこれだけ動く」の基準にする）
   //   体重64kgの目安。歩く＝いつものウォーキング（5km・約60分）1回で270kcal（毎日のメッセージの計算と同じ「1回270kcal」）／走る＝時速8kmで30分260kcal
   //   時計の記録は1回 約400kcal と出るが多めに出やすい・式（体重×時間）だと約230kcal＝その間の270を使う
-  var WALK_PER_MIN = 270 / 60, RUN_PER_MIN = 260 / 30;
   function burnCard() {
     function kv(a, b) { return '<div class="kv"><span>' + a + '</span><span>' + b + '</span></div>'; }
-    function toMove(kcal) { return '歩く ' + Math.round(kcal / WALK_PER_MIN) + '分／走る ' + Math.round(kcal / RUN_PER_MIN) + '分'; }
-    var foods = (data.teiban || []).filter(function (t) { return Number(t.kcal) >= 30; }).map(function (t) {
-      return kv(e(t.name) + '　' + g(t.kcal, 0) + 'kcal', toMove(Number(t.kcal)));
-    }).join('');
-    return '<div class="box"><h2>🏃 運動に直すと</h2>' +
-      '<div class="q">動いたときの消費</div>' +
+    return '<div class="box"><h2>🏃 運動の消費</h2>' +
       kv('いつものウォーキング 60分（5km）', '<b>約270kcal</b>') +
       kv('ゆっくり走る 30分（4km）', '<b>約260kcal</b>') +
       kv('筋トレ 1回', '<b>約120kcal</b>') +
-      '<div class="q">食べたぶんを消すには</div>' +
-      kv('100kcalごとに', toMove(100)) +
-      kv('500kcal（外食の1品くらい）', toMove(500)) +
-      foods +
       '<p class="note">体重64kgでの目安です。</p></div>';
   }
 
