@@ -76,8 +76,8 @@ var Food = (function () {
       top = entry.kind === 'photo' ?
         '<h2>この写真を送る</h2><img class="shot" src="data:image/jpeg;base64,' + entry.image + '" alt="">' :
         '<h2>文字で入れる</h2>';
-      fields = '<div class="q">' + (entry.kind === 'photo' ? '料理名や量（書くと正確になる）' : '食べたもの（料理名と量）') + '</div>' +
-        '<textarea id="foodMemo" rows="2" maxlength="200" placeholder="' + (entry.kind === 'photo' ? '例：唐揚げ定食・ごはん半分・餃子6個' : '例：牛丼並盛と味噌汁／カレーライス1皿とサラダ') + '">' + e(entry.memo) + '</textarea>' +
+      fields = '<div class="q">' + (entry.kind === 'photo' ? '料理名・量・油（書くと正確になる）' : '食べたもの（料理名と量）') + '</div>' +
+        '<textarea id="foodMemo" rows="2" maxlength="200" placeholder="' + (entry.kind === 'photo' ? '例：ごはん半分・餃子6個・マヨあり・揚げ焼き' : '例：牛丼並盛と味噌汁／カレーライス1皿とサラダ') + '">' + e(entry.memo) + '</textarea>' +
         '<label class="check"><input type="checkbox" id="foodShare"' + (entry.share ? ' checked' : '') + '> 2人で分ける<small>（' + (entry.kind === 'photo' ? '写真' : '書いた量') + 'は2人分）</small></label>';
     }
     return '<div class="box">' + top + fields +
@@ -95,7 +95,7 @@ var Food = (function () {
     return '<div class="box"><h2>記録する</h2>' +
       '<div class="row2"><button class="btn big" id="foodCam">📷 撮る</button><button class="btn sub big" id="foodPick">🖼 写真を選ぶ</button></div>' +
       '<button class="btn sub wide" id="foodText" style="margin-top:8px">✏️ 文字で入れる（写真なし）</button>' +
-      '<p class="note">料理でも、パッケージの栄養表示でも。分析はPCが動いているときに1時間おき。</p>' +
+      '<p class="note">料理でも、パッケージの栄養表示でも。斜め上から、箸も入れて撮ると量が正確になります。分析はPCが動いているときに1時間おき。</p>' +
       (teiban ? '<div class="q">定番</div><div class="teibans">' + teiban + '</div>' : '') +
       '</div>';
   }
