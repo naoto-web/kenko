@@ -108,10 +108,15 @@ var Home = (function () {
   }
 
   function foodCard(f) {
+    // 主役はカロリー（11/16 Naoto）。たんぱく質は下の小さい行
+    var kc = Math.round(f.total.kcal || 0), kt = (f.targets && f.targets.kcal) || 1400;
     var p = f.total.protein || 0, target = f.proteinTarget;
-    var pct = Math.max(0, Math.min(1, p / target)) * 100;
-    return '<div class="box"><h2>🍚 今日のたんぱく質　<small>' + Math.round(p) + 'g／' + target + 'g</small></h2>' +
-      '<div class="meter"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
+    var pct = Math.max(0, Math.min(1, kc / kt)) * 100;
+    var over = kc > kt;
+    var rest = over ? '<b style="color:var(--late)">' + UI.comma(kc - kt) + 'kcal 超え</b>' : 'あと' + UI.comma(kt - kc) + 'kcal';
+    return '<div class="box"><h2>🍚 今日のカロリー　<small>' + UI.comma(kc) + '／' + UI.comma(kt) + 'kcal</small></h2>' +
+      '<div class="meter"><i style="width:' + pct.toFixed(1) + '%' + (over ? ';background:var(--late)' : '') + '"></i></div>' +
+      '<p class="note">' + rest + '　／　たんぱく質 ' + Math.round(p) + 'g／' + target + 'g' + (p >= target ? '（達成）' : '') + '</p>' +
       (f.total.pending ? '<p class="note">⏳ 分析待ち ' + f.total.pending + '件</p>' : '') +
       '<button class="btn wide" data-go="food" style="margin-top:10px">食事を記録する</button></div>';
   }
