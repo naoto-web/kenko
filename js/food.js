@@ -90,7 +90,7 @@ var Food = (function () {
   function addCard() {
     if (entry) return entryCard();
     var teiban = (data.teiban || []).map(function (t) {
-      return '<button class="btn sub teiban" data-teiban="' + e(t.name) + '">' + e(t.name) + '<small>たんぱく質 ' + g(t.protein, 0) + 'g</small></button>';
+      return '<button class="btn sub teiban" data-teiban="' + e(t.name) + '">' + e(t.name) + '<small>' + g(t.kcal, 0) + 'kcal・たんぱく質 ' + g(t.protein, 0) + 'g</small></button>';
     }).join('');
     return '<div class="box"><h2>記録する</h2>' +
       '<div class="row2"><button class="btn big" id="foodCam">📷 撮る</button><button class="btn sub big" id="foodPick">🖼 写真を選ぶ</button></div>' +
@@ -141,7 +141,7 @@ var Food = (function () {
       return '<div class="rec">' + head + (m.memo ? '<div class="note">' + e(m.memo) + '</div>' : '') + photoBox(m) +
         '<div class="rec-acts">' + photoLink(m) + '<button class="link" data-del="' + e(m.id) + '">消す</button></div></div>';
     }
-    var nums = 'たんぱく質 <b>' + g(m.protein, 0) + 'g</b>　' + g(m.kcal, 0) + 'kcal　脂質 ' + g(m.fat, 0) + 'g　繊維 ' + g(m.fiber, 1) + 'g　塩 ' + g(m.salt, 1) + 'g';
+    var nums = '<b>' + g(m.kcal, 0) + 'kcal</b>　たんぱく質 ' + g(m.protein, 0) + 'g　脂質 ' + g(m.fat, 0) + 'g　繊維 ' + g(m.fiber, 1) + 'g　塩 ' + g(m.salt, 1) + 'g';
     return '<div class="rec">' + head + '<div class="nut">' + nums + '</div>' +
       (v.sub ? '<div class="note">' + e(v.sub) + '</div>' : '') + photoBox(m) +
       '<div class="rec-acts">' + photoLink(m) + '<button class="link" data-half="' + e(m.id) + '">半分にする</button><button class="link" data-del="' + e(m.id) + '">消す</button></div></div>';
