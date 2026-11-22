@@ -1,7 +1,7 @@
 // main.js — 起動・タブ切り替え・読み直し（ホームは前回の中身をすぐ出してから最新を取りに行く）
 var Main = (function () {
   var CACHE = 'kk_home';
-  var TITLES = { home: '健康管理', trend: '📈 推移', food: '🍚 食事', kintore: '💪 筋トレ' };
+  var TITLES = { home: '健康管理', trend: '📈 推移', food: '🍚 食事', kintore: '💪 筋トレ', kenshin: '🩺 健診' };
   var tab = 'home';
   var lastLoad = 0;
 
@@ -18,7 +18,7 @@ var Main = (function () {
     var btn = document.getElementById('reloadBtn');
     btn.classList.add('spin');
     lastLoad = Date.now();
-    var p = tab === 'home' ? loadHome() : tab === 'trend' ? Trend.load() : tab === 'kintore' ? Kintore.load() : loadFood();
+    var p = tab === 'home' ? loadHome() : tab === 'trend' ? Trend.load() : tab === 'kintore' ? Kintore.load() : tab === 'kenshin' ? Kenshin.load() : loadFood();
     return p.catch(function (err) { UI.toast('読めませんでした：' + err.message); })
       .then(function () { btn.classList.remove('spin'); });
   }
