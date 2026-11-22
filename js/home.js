@@ -17,6 +17,12 @@ var Home = (function () {
       '<p>' + e(m.text) + '</p></div>';
   }
 
+  // 月イチの健診が出てから7日のあいだだけ、健診タブへの1行（要件定義 §12）
+  function kenshinLine(m) {
+    if (!m) return '';
+    return '<button class="ks-line" data-go="kenshin">🩺 ' + e(m.label) + 'の健診結果が出ました<span>見る ›</span></button>';
+  }
+
   function goalCard(g) {
     if (!UI.has(g.current)) return '<div class="box"><h2>🎯 目標</h2><p class="note">体重のデータが足りません</p></div>';
     var done = g.startWeight > g.target ? (g.startWeight - g.current) / (g.startWeight - g.target) : 0;
@@ -165,9 +171,9 @@ var Home = (function () {
   function render(r) {
     document.getElementById('homeBody').innerHTML =
       '<p class="datehead">' + UI.mdw(r.today) + '</p>' +
-      messageCard(r.message, r.today) + missing(r.missing) + goalCard(r.goal) + weeklyCard(r.weekly) + bodyCard(r.body, r) + dayCard(r) + weekCard(r.week, r.today) + foodCard(r.food, r.balance) +
+      messageCard(r.message, r.today) + kenshinLine(r.monthly) + missing(r.missing) + goalCard(r.goal) + weeklyCard(r.weekly) + bodyCard(r.body, r) + dayCard(r) + weekCard(r.week, r.today) + foodCard(r.food, r.balance) +
       '<p class="note foot">更新 ' + e(String(r.now).substring(5, 16).replace('-', '/')) + (r.jobLast ? '　分析役が最後に動いた時刻 ' + e(r.jobLast) : '') + '</p>';
   }
 
-  return { render: render, weeklyCard: weeklyCard };
+  return { render: render, weeklyCard: weeklyCard, kenshinLine: kenshinLine };
 })();
